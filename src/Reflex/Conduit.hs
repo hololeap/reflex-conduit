@@ -1,8 +1,11 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module Reflex.Conduit (
-      ResetConduitEvent (..)
-    , ClearInputEvent (..)
+      ResetConduitEventF (..)
+    , ResetConduitEvent
+    , ClearInputEventF (..)
+    , ClearInputEvent
     , runConduitReflex
     ) where    
 
@@ -19,10 +22,15 @@ import Reflex.Class (Event)
 import Reflex.PerformEvent.Class (PerformEvent, Performable, performEvent_)
 import Reflex.TriggerEvent.Class (TriggerEvent, newEventWithLazyTriggerWithOnComplete)
 
-newtype ResetConduitEvent t = 
-    ResetConduitEvent { getResetConduitEvent :: Event t () }
-newtype ClearInputEvent t =
-    ClearInputEvent { getClearInputEvent :: Event t () }
+type ResetConduitEvent t = ResetConduitEventF t ()
+newtype ResetConduitEventF t a = 
+    ResetConduitEventF { getResetConduitEventF :: Event t a }
+    deriving Functor
+
+type ClearInputEvent t = ClearInputEventF t ()
+newtype ClearInputEventF t a =
+    ClearInputEventF { getClearInputEventF :: Event t a }
+    deriving Functor
 
 
 -- | Takes three Events and a Conduit.
@@ -75,14 +83,14 @@ asyncRunConduit inChan innerAsyncMVar conduit =
 -- | Whenever the passed Event is fired, the TChan will be cleared.
 clearOnClearEvent :: (PerformEvent t m, MonadIO (Performable m))
     => ClearInputEvent t -> TChan i -> m ()
-clearOnClearEvent (ClearInputEvent clearE) inChan =
+clearOnClearEvent (ClearInputEventF clearE) inChan =
     performEvent_ $ (liftIO . atomically . clearTChan) inChan <$ clearE
 
 -- | Whenver the passed Event is fired, the Async will be taken from the passed
 -- | TMVar; `cancel` will then be called on the Async.
 cancelOnResetEvent :: (PerformEvent t m, MonadIO (Performable m))
     => ResetConduitEvent t -> TMVar (Async ()) -> m ()
-cancelOnResetEvent (ResetConduitEvent resetE) tmvar =
+cancelOnResetEvent (ResetConduitEventF resetE) tmvar =
     performEvent_ $ (liftIO . (cancel <=< atomically . takeTMVar)) tmvar <$ resetE
 
 -- | Whenver the Event fires, its value will be pushed onto the TChan

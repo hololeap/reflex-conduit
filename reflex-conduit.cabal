@@ -22,7 +22,8 @@ flag examples
 
 library
   exposed-modules:     Reflex.Conduit
-  other-extensions:    FlexibleContexts
+  other-extensions:    DeriveFunctor
+                     , FlexibleContexts
   build-depends:       base >=4.12 && <4.13
                      , async >=2.2 && <2.3
                      , conduit >=1.3 && <1.4

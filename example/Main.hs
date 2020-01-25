@@ -5,8 +5,8 @@
 module Main (main) where
 
 import Reflex.Conduit (
-      ResetConduitEvent (ResetConduitEvent)
-    , ClearInputEvent (ClearInputEvent)
+      ResetConduitEventF (..)
+    , ClearInputEventF (..)
     , runConduitReflex)
 
 import Control.Monad.Fix (MonadFix)
@@ -63,8 +63,8 @@ parseEvent :: ( TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), Mon
     => Parser a -> Event t () -> Event t Char -> m (Event t (Either ParseError (PositionRange, a)))
 parseEvent p clearE charE =
     runConduitReflex 
-        (ResetConduitEvent clearE) 
-        (ClearInputEvent clearE)
+        (ResetConduitEventF clearE) 
+        (ClearInputEventF clearE)
         (T.singleton <$> charE) 
         (conduitParserEither p)
     
