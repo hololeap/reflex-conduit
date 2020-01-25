@@ -24,6 +24,14 @@ newtype ResetConduitEvent t =
 newtype ClearInputEvent t =
     ClearInputEvent { getClearInputEvent :: Event t () }
 
+
+-- | Takes three Events and a Conduit.
+-- | Feeds input from the third Event to the Conduit. Fires the created Event
+-- |   when the Conduit produces output.
+-- |
+-- | - The 1st event resets the current `runConduit`, causing it to start again.
+-- | - The 2nd event clears the input buffer.
+-- | - Values from the 3rd event are fed into the Conduit when it fires.
 runConduitReflex ::
     (TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), MonadIO m)
     => ResetConduitEvent t -> ClearInputEvent t -> Event t i 
