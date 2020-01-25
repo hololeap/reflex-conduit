@@ -48,9 +48,9 @@ runConduitReflex resetEvent clearEvent inEvent conduit = do
     inChan         <- liftIO newTChanIO
     innerAsyncMVar <- liftIO newEmptyTMVarIO
 
-    writeEventToChan inEvent inChan
     cancelOnResetEvent resetEvent innerAsyncMVar
     clearOnClearEvent  clearEvent inChan
+    writeEventToChan   inEvent    inChan
 
     asyncRunConduit inChan innerAsyncMVar conduit
 
@@ -65,7 +65,7 @@ runConduitReflex resetEvent clearEvent inEvent conduit = do
 -- |
 -- | When the Event is no longer needed, the outer Async will be cancelled as
 -- |   well as the inner Async (if it exits)
-asyncRunConduit :: (TriggerEvent t m)
+asyncRunConduit :: TriggerEvent t m
     => TChan i -> TMVar (Async ()) -> ConduitT i o IO () -> m (Event t o)
 asyncRunConduit inChan innerAsyncMVar conduit =
     newEventWithLazyTriggerWithOnComplete $ \trigger -> do

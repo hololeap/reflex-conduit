@@ -23,3 +23,5 @@ cabal.project.local~
 
 .*.sw?
 *.bak
+
+/reflex-conduit-example

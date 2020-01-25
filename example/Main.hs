@@ -5,8 +5,8 @@
 module Main (main) where
 
 import Reflex.Conduit (
-      ResetConduitEventF (..)
-    , ClearInputEventF (..)
+      ResetConduitEventF (ResetConduitEventF)
+    , ClearInputEventF (ClearInputEventF)
     , runConduitReflex)
 
 import Control.Monad.Fix (MonadFix)
@@ -32,7 +32,7 @@ import qualified Graphics.Vty as V
 main :: IO ()
 main = mainWidget $ do
     bs <- myBoxStyle
-    charE   <- charEvent <$> input
+    charE   <- fmapMaybe vtyEventToChar <$> input
     clearE  <- void <$> keyCombo (V.KEsc, [])
     resultE <- parseEvent myParser clearE charE
 
@@ -48,8 +48,10 @@ main = mainWidget $ do
             (inputWithClear clearE charE)
             (parseWidget clearE resultE)
 
--- | A line that shows the output of `parseEvent`; clears when the first Event fires.
-parseWidget :: (MonadHold t m, Show a, Reflex t) 
+-- | A line that shows the contents of `Event t a`.
+-- | - Starts empty but updates whenever the second Event fires.
+-- | - Clears when the first Event fires.
+parseWidget :: (MonadHold t m, Reflex t, Show a)
     => Event t () -> Event t a -> VtyWidget t m ()
 parseWidget clearE resultE = do
     let clearFE = "" <$ clearE
@@ -57,9 +59,9 @@ parseWidget clearE resultE = do
     pwE <- hold "" $ leftmost [clearFE, showFE]
     text pwE
 
--- | Creates an event from `runConduitReflex` and `conduitParserEither`.
--- | If the first Event fires, it will reset the Conduit and clear the input TChan
-parseEvent :: ( TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), MonadIO m)
+-- | Creates an Event from `runConduitReflex` and `conduitParserEither`.
+-- | If the first Event fires, it will reset the Conduit and clear the input buffer.
+parseEvent :: (TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), MonadIO m)
     => Parser a -> Event t () -> Event t Char -> m (Event t (Either ParseError (PositionRange, a)))
 parseEvent p clearE charE =
     runConduitReflex 
@@ -76,9 +78,6 @@ inputWithClear clearE charE = do
     let snocFE  = flip T.snoc <$> charE
     inWCB <- accumB (&) "" $ leftmost [clearFE, snocFE]
     text inWCB
-
-charEvent :: Reflex t => Event t VtyEvent -> Event t Char
-charEvent = fmapMaybe vtyEventToChar
 
 vtyEventToChar :: VtyEvent -> Maybe Char
 vtyEventToChar = \case
@@ -99,4 +98,3 @@ myVLayout wa wb wc = void $ splitV constSize noFocus wa $ splitV constSize noFoc
   where
     constSize = pure (const 1)
     noFocus = pure (False, False)
-
