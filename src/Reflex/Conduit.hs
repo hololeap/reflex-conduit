@@ -1,5 +1,7 @@
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Reflex.Conduit (
       ResetConduitEventF (..)
@@ -16,22 +18,31 @@ import Control.Monad (forever, (<=<))
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.STM (STM, atomically)
 import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT))
+import Data.Bifunctor (first)
 import Data.Conduit (ConduitT, runConduit, awaitForever, yield, (.|))
 import Data.Functor (void)
-import Reflex.Class (Event)
+import Data.Witherable (Filterable)
+import Reflex.Class (Accumulator, Event, Reflex, accumMaybeM, mapAccumMaybeM)
 import Reflex.PerformEvent.Class (PerformEvent, Performable, performEvent_)
 import Reflex.TriggerEvent.Class (TriggerEvent, newEventWithLazyTriggerWithOnComplete)
 
 type ResetConduitEvent t = ResetConduitEventF t ()
 newtype ResetConduitEventF t a = 
     ResetConduitEventF { getResetConduitEventF :: Event t a }
-    deriving Functor
+    deriving (Functor, Semigroup, Monoid, Filterable)
+
+instance Reflex t => Accumulator t (ResetConduitEventF t) where
+    accumMaybeM f a = fmap ResetConduitEventF . accumMaybeM f a
+    mapAccumMaybeM f a = fmap (first ResetConduitEventF) . mapAccumMaybeM f a
 
 type ClearInputEvent t = ClearInputEventF t ()
 newtype ClearInputEventF t a =
     ClearInputEventF { getClearInputEventF :: Event t a }
-    deriving Functor
+    deriving (Functor, Semigroup, Monoid, Filterable)
 
+instance Reflex t => Accumulator t (ClearInputEventF t) where
+    accumMaybeM f a = fmap ClearInputEventF . accumMaybeM f a
+    mapAccumMaybeM f a = fmap (first ClearInputEventF) . mapAccumMaybeM f a
 
 -- | Takes three Events and a Conduit.
 -- | Feeds input from the third Event to the Conduit. Fires the created Event
