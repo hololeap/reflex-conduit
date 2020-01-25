@@ -29,7 +29,6 @@ import qualified Data.Text as T
 import           Data.Text (Text)
 import qualified Graphics.Vty as V
 
-
 main :: IO ()
 main = mainWidget $ do
     bs <- myBoxStyle
@@ -49,14 +48,17 @@ main = mainWidget $ do
             (inputWithClear clearE charE)
             (parseWidget clearE resultE)
 
-
-parseWidget :: (MonadHold t m, Show a, Reflex t) => Event t () -> Event t a -> VtyWidget t m ()
+-- | A line that shows the output of `parseEvent`; clears when the first Event fires.
+parseWidget :: (MonadHold t m, Show a, Reflex t) 
+    => Event t () -> Event t a -> VtyWidget t m ()
 parseWidget clearE resultE = do
     let clearFE = "" <$ clearE
     let showFE  = showText <$> resultE
     pwE <- hold "" $ leftmost [clearFE, showFE]
     text pwE
 
+-- | Creates an event from `runConduitReflex` and `conduitParserEither`.
+-- | If the first Event fires, it will reset the Conduit and clear the input TChan
 parseEvent :: ( TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), MonadIO m)
     => Parser a -> Event t () -> Event t Char -> m (Event t (Either ParseError (PositionRange, a)))
 parseEvent p clearE charE =
@@ -66,8 +68,8 @@ parseEvent p clearE charE =
         (T.singleton <$> charE) 
         (conduitParserEither p)
     
-
-inputWithClear :: ( Reflex t, MonadHold t m, MonadFix m)
+-- | A line that shows the keyboard input; clears when the first Event fires
+inputWithClear :: (Reflex t, MonadHold t m, MonadFix m)
     => Event t () -> Event t Char -> VtyWidget t m ()
 inputWithClear clearE charE = do
     let clearFE = const "" <$ clearE
@@ -90,6 +92,7 @@ myBoxStyle = pure $ pure doubleBoxStyle
 showText :: Show a => a -> Text
 showText = T.pack . show
 
+-- | Three lines supplied by VtyWidgets, with no focus
 myVLayout :: (Reflex t, Monad m, MonadNodeId m)
     => VtyWidget t m a -> VtyWidget t m b -> VtyWidget t m c -> VtyWidget t m ()
 myVLayout wa wb wc = void $ splitV constSize noFocus wa $ splitV constSize noFocus wb wc
