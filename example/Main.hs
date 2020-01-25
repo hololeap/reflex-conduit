@@ -32,14 +32,14 @@ import qualified Graphics.Vty as V
 
 main :: IO ()
 main = mainWidget $ do
-    i  <- input
     bs <- myBoxStyle
-    let charE = charEvent i
-    clearE <- void <$> keyCombo (V.KEsc, [])
+    charE   <- charEvent <$> input
+    clearE  <- void <$> keyCombo (V.KEsc, [])
     resultE <- parseEvent myParser clearE charE
---    resultE <- foo charE
+
     runLayout (pure Orientation_Column) 0 never $
         fixed (pure 5) $ box bs $ layout clearE charE resultE
+
     void <$> keyCombo (V.KChar 'c', [V.MCtrl])
   where
     myParser = string "abc"
@@ -57,7 +57,7 @@ parseWidget clearE resultE = do
     pwE <- hold "" $ leftmost [clearFE, showFE]
     text pwE
 
-parseEvent :: ( TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), MonadIO m, Show a)
+parseEvent :: ( TriggerEvent t m, PerformEvent t m, MonadIO (Performable m), MonadIO m)
     => Parser a -> Event t () -> Event t Char -> m (Event t (Either ParseError (PositionRange, a)))
 parseEvent p clearE charE =
     runConduitReflex 
